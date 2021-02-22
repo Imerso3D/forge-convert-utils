@@ -7,7 +7,7 @@
 const path = require('path');
 const { SvfReader, ObjWriter } = require('..');
 
-async function run (filepath, outputDir) {
+async function run (filepath, outputDir, idFile) {
     const defaultOptions = {
         skipNormals: false,
         log: console.log
@@ -19,10 +19,11 @@ async function run (filepath, outputDir) {
         const scene = await reader.read();
         console.timeEnd("read svf")
 
+
         console.time("write obj")
         let writer;
         writer = new ObjWriter(Object.assign({}, defaultOptions));
-        await writer.write(scene, outputDir);
+        await writer.write(scene, outputDir, idFile);
         console.timeEnd("write obj")
 
     } catch(err) {
@@ -31,4 +32,4 @@ async function run (filepath, outputDir) {
     }
 }
 
-run(process.argv[2], process.argv[3]);
+run(process.argv[2], process.argv[3], process.argv[4]);

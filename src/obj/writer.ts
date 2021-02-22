@@ -61,13 +61,24 @@ export class Writer {
         return matrix
     }
 
+    private loadGlobalId(idFile: string) : Map<number, string> {
+        const text = fse.readFileSync(idFile, 'utf-8')
+        const entries = text.split("\n").map(s => s.split(" "))
+
+        const ids = new Map<number, string>()
+        entries.forEach(e => ids.set(+e[0], e[1]))
+        return ids
+    }
+
     /**
      * Outputs scene into OBJ.
      * @async
      * @param {IMF.IScene} imf Complete scene in intermediate, in-memory format.
      * @param {string} outputDir Path to output folder.
      */
-    async write(imf: IMF.IScene, outputDir: string) {
+    async write(imf: IMF.IScene, outputDir: string, idFile?: string) {
+
+        const globalIds = idFile ? this.loadGlobalId(idFile) : undefined
 
         fse.mkdirpSync(outputDir)
         const objPath = path.join(outputDir, 'output.obj');
@@ -106,7 +117,8 @@ export class Writer {
             const indices = geometry.getIndices()
             const vertices = geometry.getVertices()                    
 
-            result.push("o " + node.dbid)
+            const id = globalIds?.has(node.dbid) ? globalIds.get(node.dbid) : `dbid-${node.dbid}`
+            result.push("o " + id)
                                 
             const numVertices = vertices.length / 3
             const numIndices = indices.length / 3

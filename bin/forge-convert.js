@@ -24,7 +24,7 @@ async function convertRemote(urn, guid, outputFolder, options) {
         await writer.write(scene, path.join(outputFolder));
     } else if (options.outputFormat === "obj"){
         const writer = new ObjWriter(options);
-        await writer.write(scene, path.join(outputFolder));
+        await writer.write(scene, path.join(outputFolder), options.globalIds);
     } else {
         console.error("Unsupported output format " + options.outputFormat)
     }
@@ -39,7 +39,7 @@ async function convertLocal(svfPath, outputFolder, options) {
         await writer.write(scene, path.join(outputFolder));
     } else if (options.outputFormat === "obj"){
         const writer = new ObjWriter(options);
-        await writer.write(scene, path.join(outputFolder));
+        await writer.write(scene, path.join(outputFolder), options.globalIds);
     } else {
         console.error("Unsupported output format " + options.outputFormat)
     }
@@ -54,6 +54,7 @@ program
     .option('-il, --ignore-lines', 'ignore line geometry', false)
     .option('-ip, --ignore-points', 'ignore point geometry', false)
     .option('-f, --output-format [format]', 'output format', 'gltf')
+    .option('-g, --global-ids [path]', 'List of global IDs')
     .option('--center', 'move model to origin', false)
 
     .arguments('<URN-or-local-path> [GUID]')
@@ -66,6 +67,7 @@ program
             ignorePointGeometry: program.ignorePoints,
             center: program.center,
             outputFormat: program.outputFormat,
+            globalIds: program.globalIds,
             log: console.log
         };
         try {
