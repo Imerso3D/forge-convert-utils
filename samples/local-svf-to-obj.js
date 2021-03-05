@@ -19,11 +19,12 @@ async function run (filepath, outputDir, idFile) {
         const scene = await reader.read();
         console.timeEnd("read svf")
 
+        const propdb = await reader.getPropertyDb();
 
         console.time("write obj")
         let writer;
         writer = new ObjWriter(Object.assign({}, defaultOptions));
-        await writer.write(scene, outputDir, idFile);
+        await writer.write(scene, outputDir, propdb);
         console.timeEnd("write obj")
 
     } catch(err) {

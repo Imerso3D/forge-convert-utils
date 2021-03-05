@@ -5,7 +5,7 @@ import * as zlib from 'zlib';
  * stored in various 'objects_*.json.gz' assets in an SVF.
  */
 export class PropDbReader {
-    protected _ids: number[];
+    protected _ids: string[];
     protected _offsets: number[];
     protected _avs: number[];
     protected _attrs: any[];
@@ -43,7 +43,11 @@ export class PropDbReader {
                 const valOffset = this._avs[i + 1];
                 const attr = this._attrs[attrOffset];
                 const value = this._vals[valOffset];
-                yield { name: attr[0], category: attr[1], value };
+                if (attr[1].startsWith('IFC') || attr[5]?.startsWith('Ifc')) {
+                    yield { name: attr[5], category: attr[1], value };
+                } else {
+                    yield { name: attr[0], category: attr[1], value };
+                }
             }
         }
     }
@@ -60,10 +64,29 @@ export class PropDbReader {
             if (prop.category && prop.category.match(/^__\w+__$/)) {
                 // Skip internal attributes
             } else {
-                props[prop.name] = prop.value;
+                props[`${prop.category}:${prop.name}`] = prop.value;
             }
         }
         return props;
+    }
+
+    findPropertyRecursive(id: number, properties: string[]): any {
+
+        const props = this.getProperties(id)
+        for (const p of properties){
+            if (props[p])
+                return props[p]
+        }
+       
+        const externalId = this._ids[id]
+        const idx = externalId?.lastIndexOf('/')
+        if (!idx){
+            return undefined
+        }
+        const parentExternalId = externalId.substring(0, idx)
+        const parentId = this._ids.findIndex(s => s === parentExternalId)
+
+        return this.findPropertyRecursive(parentId, properties)
     }
 
     /**

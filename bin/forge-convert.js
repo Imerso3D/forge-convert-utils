@@ -19,12 +19,14 @@ async function convertRemote(urn, guid, outputFolder, options) {
     console.log(`Converting urn ${urn}, guid ${guid}`);
     const reader = await SvfReader.FromDerivativeService(urn, guid, auth);
     const scene = await reader.read({ log: console.log });
+
     if (options.outputFormat === "gltf"){
         const writer = new GltfWriter(options);
         await writer.write(scene, path.join(outputFolder));
     } else if (options.outputFormat === "obj"){
+        const propdb = await reader.getPropertyDb()
         const writer = new ObjWriter(options);
-        await writer.write(scene, path.join(outputFolder), options.globalIds);
+        await writer.write(scene, path.join(outputFolder), propdb);
     } else {
         console.error("Unsupported output format " + options.outputFormat)
     }
@@ -34,12 +36,14 @@ async function convertLocal(svfPath, outputFolder, options) {
     console.log(`Converting local file ${svfPath}`);
     const reader = await SvfReader.FromFileSystem(svfPath);
     const scene = await reader.read({ log: console.log });
+
     if (options.outputFormat === "gltf"){
         const writer = new GltfWriter(options);
         await writer.write(scene, path.join(outputFolder));
     } else if (options.outputFormat === "obj"){
+        const propdb = await reader.getPropertyDb()
         const writer = new ObjWriter(options);
-        await writer.write(scene, path.join(outputFolder), options.globalIds);
+        await writer.write(scene, path.join(outputFolder), propdb);
     } else {
         console.error("Unsupported output format " + options.outputFormat)
     }
@@ -54,7 +58,6 @@ program
     .option('-il, --ignore-lines', 'ignore line geometry', false)
     .option('-ip, --ignore-points', 'ignore point geometry', false)
     .option('-f, --output-format [format]', 'output format', 'gltf')
-    .option('-g, --global-ids [path]', 'List of global IDs')
     .option('--center', 'move model to origin', false)
 
     .arguments('<URN-or-local-path> [GUID]')
@@ -67,7 +70,6 @@ program
             ignorePointGeometry: program.ignorePoints,
             center: program.center,
             outputFormat: program.outputFormat,
-            globalIds: program.globalIds,
             log: console.log
         };
         try {

@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fse from 'fs-extra';
 import * as IMF from '../common/intermediate-format';
 import * as THREE from 'three';
+import { PropDbReader } from '../common/propdb-reader';
 
 export interface IWriterOptions {
     log?: (msg: string) => void; /** Optional logging function. */
@@ -76,9 +77,7 @@ export class Writer {
      * @param {IMF.IScene} imf Complete scene in intermediate, in-memory format.
      * @param {string} outputDir Path to output folder.
      */
-    async write(imf: IMF.IScene, outputDir: string, idFile?: string) {
-
-        const globalIds = idFile ? this.loadGlobalId(idFile) : undefined
+    async write(imf: IMF.IScene, outputDir: string, propdb?: PropDbReader) {
 
         fse.mkdirpSync(outputDir)
         const objPath = path.join(outputDir, 'output.obj');
@@ -117,7 +116,7 @@ export class Writer {
             const indices = geometry.getIndices()
             const vertices = geometry.getVertices()                    
 
-            const id = globalIds?.has(node.dbid) ? globalIds.get(node.dbid) : `dbid-${node.dbid}`
+            const id = propdb?.findPropertyRecursive(node.dbid, ['IFC:GLOBALID', 'Element:IfcGUID']) ??`dbid-${node.dbid}`
             result.push("o " + id)
                                 
             const numVertices = vertices.length / 3
