@@ -81,12 +81,16 @@ export class Writer {
 
         fse.mkdirpSync(outputDir)
         const objPath = path.join(outputDir, 'output.obj');
+        const openingObjPath = path.join(outputDir, 'openings.obj');
 
         const rootScale = this.getRootScale(imf)
-        let indexOffset = 1
-        let result : string[] = []
+        let regularIndexOffset = 1
+        let openingIndexOffset = 1
+        let regularOutput : string[] = []
+        let openingOutput : string[] = []
         
         fse.writeFileSync(objPath, "");
+        fse.writeFileSync(openingObjPath, "");
 
         const myFixed4 = (x: number) => {
             return Math.round(x * 10000)/10000
@@ -110,6 +114,14 @@ export class Writer {
                 continue
             }
 
+            let isOpening = false
+            const props = propdb?.getProperties(node.dbid)
+            if (props && props['Element:IfcExportAs'] && props['Element:IfcExportAs'] === 'IfcOpeningElement') {
+                isOpening = true
+            }
+
+            const output = isOpening ? openingOutput : regularOutput
+
             const transform = this.nodeTransform(node)
             const rotation = new THREE.Matrix4().extractRotation(transform)
 
@@ -117,7 +129,7 @@ export class Writer {
             const vertices = geometry.getVertices()                    
 
             const id = propdb?.findPropertyRecursive(node.dbid, ['IFC:GLOBALID', 'Element:IfcGUID']) ??`dbid-${node.dbid}`
-            result.push("o " + id)
+            output.push("o " + id)
                                 
             const numVertices = vertices.length / 3
             const numIndices = indices.length / 3
@@ -126,7 +138,7 @@ export class Writer {
             for (let v = 0; v < numVertices; v++){
                 const pos = new THREE.Vector3(vIt.next().value, vIt.next().value, vIt.next().value)
                 pos.applyMatrix4(transform).multiplyScalar(rootScale)
-                result.push(`v ${myFixed4(pos.x)} ${myFixed4(pos.y)} ${myFixed4(pos.z)}`)
+                output.push(`v ${myFixed4(pos.x)} ${myFixed4(pos.y)} ${myFixed4(pos.z)}`)
             }
 
             let writingNormals = false
@@ -138,7 +150,7 @@ export class Writer {
                     for (let i = 0; i < normals.length / 3; i++){
                         const n = new THREE.Vector3(nIt.next().value, nIt.next().value, nIt.next().value)
                         n.applyMatrix4(rotation)
-                        result.push(`vn ${myFixed2(n.x)} ${myFixed2(n.y)} ${myFixed2(n.z)}`)
+                        output.push(`vn ${myFixed2(n.x)} ${myFixed2(n.y)} ${myFixed2(n.z)}`)
                     }
                 }
             }
@@ -151,6 +163,8 @@ export class Writer {
                 }
             }
 
+            const indexOffset = isOpening ? openingIndexOffset : regularIndexOffset
+
             const fIt = indices.values()
             for (let f = 0; f < numIndices; f++){
 
@@ -158,18 +172,26 @@ export class Writer {
                 const f1 = indexOffset + fIt.next().value
                 const f2 = indexOffset + fIt.next().value
 
-                result.push(faceString(f0, f1, f2, writingNormals))
+                output.push(faceString(f0, f1, f2, writingNormals))
             }
 
-            indexOffset += numVertices
+            if (isOpening)
+                openingIndexOffset += numVertices
+            else
+                regularIndexOffset += numVertices
 
-            if (result.length > 50000){
-                fse.appendFileSync(objPath, result.join("\n") + "\n");
-                result = []
+            if (regularOutput.length > 50000){
+                fse.appendFileSync(objPath, regularOutput.join("\n") + "\n");
+                regularOutput = []
+            }
+            if (openingOutput.length > 50000){
+                fse.appendFileSync(openingObjPath, openingOutput.join("\n") + "\n");
+                openingOutput = []
             }
         }
 
-        fse.appendFileSync(objPath, result.join("\n"));
+        fse.appendFileSync(objPath, regularOutput.join("\n"));
+        fse.appendFileSync(openingObjPath, openingOutput.join("\n"));
 
         this.options.log(`Finished writing OBJ`);
     }
