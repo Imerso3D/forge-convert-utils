@@ -224,8 +224,13 @@ export class Reader {
 
     protected constructor(svf: Buffer, protected resolve: (uri: string) => Promise<Buffer>) {
         const zip = new Zip(svf);
-        const manifest = JSON.parse(zip.getEntry('manifest.json').getData().toString()) as SVF.ISvfManifest;
-        const metadata = JSON.parse(zip.getEntry('metadata.json').getData().toString()) as SVF.ISvfMetadata;
+        const manifestEntry = zip.getEntry('manifest.json')?.getData()
+        const metadataEntry = zip.getEntry('metadata.json')?.getData()
+        if (manifestEntry === undefined || metadataEntry === undefined) {
+            throw new Error("Failed to get manifest or metadata");
+        }
+        const manifest = JSON.parse(manifestEntry.toString()) as SVF.ISvfManifest;
+        const metadata = JSON.parse(metadataEntry.toString()) as SVF.ISvfMetadata;
         const embedded: { [key: string]: Buffer } = {};
         zip.getEntries().filter(entry => entry.name !== 'manifest.json' && entry.name !== 'metadata.json').forEach((entry) => {
             embedded[entry.name] = entry.getData();
